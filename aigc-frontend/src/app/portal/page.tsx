@@ -134,19 +134,20 @@ export default function PortalCliente() {
             {/* Drag & Drop File Upload */}
             <div className="col-span-2 mt-2">
               <label className="text-sm font-medium text-neutral-300 mb-2 block">Media (B-Roll Propio)</label>
-              <div className="border-2 border-dashed border-white/10 rounded-xl p-8 text-center hover:border-indigo-500/50 hover:bg-indigo-500/5 transition-all group relative cursor-pointer">
+              <label htmlFor="custom_media" className="border-2 border-dashed border-white/10 rounded-xl p-8 text-center hover:border-indigo-500/50 hover:bg-indigo-500/5 transition-all group relative cursor-pointer block">
                 <input 
+                  id="custom_media"
                   type="file" 
-                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                  className="hidden"
                   accept="video/mp4,video/quicktime,image/jpeg,image/png"
                   onChange={e => setFile(e.target.files?.[0] || null)}
                 />
                 <UploadCloud className="w-8 h-8 text-neutral-500 mx-auto mb-3 group-hover:text-indigo-400 transition-colors" />
                 <p className="text-sm text-neutral-300 font-medium">
-                  {file ? file.name : "Arrastra un video o imagen aquí"}
+                  {file ? file.name : "Arrastra un video o imagen aquí (Clic para subir)"}
                 </p>
                 <p className="text-xs text-neutral-500 mt-1">MP4, MOV, JPG o PNG (Opcional)</p>
-              </div>
+              </label>
             </div>
           </div>
           
