@@ -1,0 +1,6 @@
+{
+  "framework": "nextjs",
+  "buildCommand": "cd aigc-frontend && npm run build",
+  "installCommand": "cd aigc-frontend && npm install",
+  "outputDirectory": "aigc-frontend/.next"
+}
