@@ -8,6 +8,7 @@ lsof -ti:8000 | xargs kill -9 2>/dev/null
 
 echo "🧠 Levantando Backend (FastAPI)..."
 source venv/bin/activate
+pip install -r requirements.txt
 uvicorn backend.main:app --reload --port 8000 &
 
 echo "💻 Compilando y Levantando UI (Next.js)..."
