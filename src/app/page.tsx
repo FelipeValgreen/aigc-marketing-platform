@@ -2,8 +2,10 @@
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { Video, FolderOpen, PlaySquare, ArrowUpRight, Wand2, Activity } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 export default function Dashboard() {
+  const router = useRouter();
   const [projects, setProjects] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [errorSync, setErrorSync] = useState(false);
@@ -11,7 +13,7 @@ export default function Dashboard() {
   useEffect(() => {
     const fetchProjects = async () => {
       try {
-        const res = await api.get("/projects");
+        const res = await api.get("/clients/projects");
         setProjects(res.data);
       } catch (err) {
         setErrorSync(true);
@@ -33,7 +35,7 @@ export default function Dashboard() {
           <h2 className="text-3xl font-semibold tracking-tight text-white mb-2">Overview</h2>
           <p className="text-neutral-400 text-sm">Track your AI-generated video campaigns in real time.</p>
         </div>
-        <button className="bg-white text-black px-5 py-2.5 rounded-lg text-sm font-semibold hover:bg-neutral-200 transition-all flex items-center gap-2 shadow-[0_0_20px_rgba(255,255,255,0.1)]">
+        <button onClick={() => router.push('/onboarding')} className="bg-white text-black px-5 py-2.5 rounded-lg text-sm font-semibold hover:bg-neutral-200 transition-all flex items-center gap-2 shadow-[0_0_20px_rgba(255,255,255,0.1)]">
           <Wand2 className="w-4 h-4" />
           Create Video
         </button>

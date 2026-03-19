@@ -18,7 +18,7 @@ export default function Onboarding() {
     setErrorMsg("");
     
     try {
-      const res = await api.post("/onboarding", {
+      const res = await api.post("/clients/onboarding", {
         company_name: companyName,
         website_url: websiteUrl
       });

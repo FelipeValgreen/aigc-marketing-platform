@@ -34,7 +34,7 @@ export default function ProjectForm({ onSuccess }: { onSuccess: (data: any) => v
     if (file) formData.append("custom_media", file);
 
     try {
-      const res = await api.post("/projects", formData);
+      const res = await api.post("/clients/projects", formData);
       onSuccess(res.data);
     } catch (err: any) {
       setErrorMsg(err.response?.data?.detail || "System Error. Verify Hugging Face Backend Status.");

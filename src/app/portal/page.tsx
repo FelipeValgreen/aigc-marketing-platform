@@ -11,7 +11,7 @@ export default function PortalCliente() {
   const handleApprove = async () => {
     setIsRendering(true);
     try {
-      const res = await api.post(`/projects/${projectData.project_id}/approve-and-render`);
+      const res = await api.post(`/clients/projects/${projectData.project_id}/approve-and-render`);
       setProjectData({ ...projectData, status: "COMPLETADO", video_url: res.data.video_url });
     } catch (err: any) {
       console.error(err);
