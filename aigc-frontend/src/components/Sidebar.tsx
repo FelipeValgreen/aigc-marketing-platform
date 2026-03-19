@@ -9,9 +9,9 @@ export default function Sidebar() {
   
   const navItems = [
     { label: "Dashboard", href: "/", icon: LayoutDashboard },
-    { label: "Create Project", href: "/portal", icon: Home },
+    { label: "Onboarding (Crear Cliente)", href: "/onboarding", icon: FileVideo },
+    { label: "Portal Visual (Crear Video)", href: "/portal", icon: Home },
     { label: "Vault (Bóveda)", href: "/vault", icon: FileVideo },
-    { label: "Settings", href: "/settings", icon: Settings },
   ];
 
   return (
