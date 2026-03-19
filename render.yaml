@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: aigc-backend-api
+    env: docker
+    plan: starter
+    healthCheckPath: /
+    envVars:
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: PEXELS_API_KEY
+        sync: false
