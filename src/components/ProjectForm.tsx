@@ -119,7 +119,7 @@ export default function ProjectForm({ onSuccess }: { onSuccess: (data: any) => v
           <p className="text-neutral-400 text-sm mb-8">Paso final: Adjunta el B-Roll en crudo o permite a la IA inyectar desde Pexels.</p>
           <div className="space-y-6">
             <label htmlFor="file-upload" className={`border-2 ${file ? 'border-indigo-500/50 bg-indigo-500/5' : 'border-dashed border-[#27272a] hover:border-indigo-500/50 hover:bg-indigo-500/5'} rounded-2xl p-12 text-center transition-all cursor-pointer block group`}>
-              <input id="file-upload" type="file" accept="video/*,image/*" className="hidden" onChange={e => setFile(e.target.files?.[0] || null)} />
+              <input id="file-upload" type="file" accept="*/*" className="hidden" onChange={e => setFile(e.target.files?.[0] || null)} />
               {file ? (
                 <div className="animate-in zoom-in-95 duration-300">
                   <CheckCircle2 className="w-12 h-12 text-indigo-400 mx-auto mb-3" />

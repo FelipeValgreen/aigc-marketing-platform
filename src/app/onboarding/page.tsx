@@ -24,7 +24,6 @@ export default function Onboarding() {
       });
       setResult(res.data);
     } catch (err: any) {
-      console.error(err);
       setErrorMsg(err.response?.data?.detail || "Error extrayendo ADN. Intenta de nuevo.");
     } finally {
       setIsLoading(false);
