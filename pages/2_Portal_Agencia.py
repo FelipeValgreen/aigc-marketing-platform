@@ -3,7 +3,7 @@ import requests
 import json
 import os
 
-API_BASE_URL = os.getenv("API_BASE_URL", "http://localhost:8000/api/v1")
+API_BASE_URL = os.getenv("API_BASE_URL", "https://valgreen21-aigc-backend.hf.space/api/v1")
 
 st.set_page_config(page_title="Portal Agencia - AIGC", page_icon="⚙️", layout="wide")
 st.title("⚙️ Dashboard de Agencia (Admin)")
