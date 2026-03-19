@@ -25,4 +25,4 @@ RUN chmod -R 777 /app
 # Exponer puerto 7860 (REQUERIDO POR HUGGING FACE SPACES)
 EXPOSE 7860
 
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "7860"]
+CMD ["uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "7860"]

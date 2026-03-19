@@ -16,8 +16,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="dark">
-      <body className={`${inter.className} bg-[#09090b] text-white min-h-screen antialiased selection:bg-purple-500/30`}>
+    <html lang="en" className="dark" suppressHydrationWarning>
+      <body suppressHydrationWarning className={`${inter.className} bg-[#09090b] text-white min-h-screen antialiased selection:bg-purple-500/30`}>
         <div className="flex">
           <Sidebar />
           <main className="pl-64 flex-1 min-h-screen relative overflow-hidden">
