@@ -10,3 +10,4 @@ static/uploads/*
 __pycache__/
 *.sqlite
 data.db
+.vercel

@@ -32,9 +32,9 @@ export default function PortalCliente() {
         headers: { "Content-Type": "multipart/form-data" }
       });
       setProjectData(res.data);
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      alert("Error al generar los guiones.");
+      alert(`Error del Backend: ${err.response?.data?.detail || err.message}`);
     } finally {
       setIsLoading(false);
     }
