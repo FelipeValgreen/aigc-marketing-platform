@@ -48,19 +48,19 @@ export default function PortalCliente() {
             <div className="bg-[#09090b] rounded-2xl p-8 border border-[#27272a] space-y-6 mb-8 shadow-inner">
               <div className="space-y-1">
                 <span className="text-[10px] font-bold uppercase text-indigo-400 tracking-widest block mb-2">Pilar 1: Hook (Gancho)</span>
-                <p className="text-white/90 text-lg font-medium">{projectData.script.hook?.script}</p>
-                <p className="text-neutral-500 text-sm italic py-2">🎥 Dir: {projectData.script.hook?.visuals}</p>
+                <p className="text-white/90 text-lg font-medium">{typeof projectData.script.hook === 'object' ? projectData.script.hook?.script : projectData.script.hook}</p>
+                <p className="text-neutral-500 text-sm italic py-2">🎥 Dir: {typeof projectData.script.hook === 'object' ? projectData.script.hook?.visuals : 'Abierto a interpretación'}</p>
               </div>
               <div className="h-px w-full bg-[#27272a]" />
               <div className="space-y-1">
                 <span className="text-[10px] font-bold uppercase text-emerald-400 tracking-widest block mb-2">Pilar 2: Body (Desarrollo)</span>
-                <p className="text-white/90 text-lg font-medium">{projectData.script.body?.script}</p>
-                <p className="text-neutral-500 text-sm italic py-2">🎥 Dir: {projectData.script.body?.visuals}</p>
+                <p className="text-white/90 text-lg font-medium">{typeof projectData.script.body === 'object' ? projectData.script.body?.script : projectData.script.body}</p>
+                <p className="text-neutral-500 text-sm italic py-2">🎥 Dir: {typeof projectData.script.body === 'object' ? projectData.script.body?.visuals : 'Abierto a interpretación'}</p>
               </div>
               <div className="h-px w-full bg-[#27272a]" />
               <div className="space-y-1">
                 <span className="text-[10px] font-bold uppercase text-amber-400 tracking-widest block mb-2">Pilar 3: Call To Action</span>
-                <p className="text-white/90 text-lg font-medium">{projectData.script.cta?.script}</p>
+                <p className="text-white/90 text-lg font-medium">{typeof projectData.script.cta === 'object' ? projectData.script.cta?.script : projectData.script.cta}</p>
               </div>
             </div>
 
