@@ -1,0 +1,14 @@
+fastapi
+uvicorn
+sqlalchemy
+pydantic
+python-multipart
+httpx
+beautifulsoup4
+google-generativeai
+edge-tts
+aiofiles
+python-dotenv
+opencv-python-headless
+moviepy
+jinja2
