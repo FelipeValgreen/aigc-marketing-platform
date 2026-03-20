@@ -205,67 +205,100 @@ async def approve_and_render_project(project_id: int, db: Session = Depends(get_
     full_monologue = f"{hook} {body} {cta}".strip()
     
     avatar_id = project.avatar_id or "sofia"
+    heygen_error = None
+    did_error = None
     
-    # === INTENTO 1: Motor Premium (HeyGen) ===
+    # === MOTOR 1: HeyGen (Premium - requiere créditos pagados) ===
     try:
         from backend.services.video_service import generate_avatar_video
-        print(f"\n🎬 [MOTOR PREMIUM] Intentando HeyGen para proyecto #{project.id}...")
+        heygen_key = os.getenv("HEYGEN_API_KEY", "")
+        if not heygen_key:
+            raise Exception("HEYGEN_API_KEY no configurada")
+        print(f"\n🎬 [MOTOR 1 - HEYGEN] Intentando para proyecto #{project.id}...")
         
         render_result = await generate_avatar_video(
             script=full_monologue,
             avatar_id=avatar_id,
-            voice_id="",  # video_service usa su propio mapeo interno
+            voice_id="",
             bg_video_path=project.custom_media_path
         )
         
         final_url = render_result.get("video_url")
-        # Si es ruta local, prefijamos con el host
         if final_url and final_url.startswith("/"):
             final_url = f"https://valgreen21-aigc-backend.hf.space{final_url}"
         
         project.video_url = final_url
         project.status = "COMPLETADO"
         db.commit()
-        
         return {"project_id": project.id, "video_url": final_url, "provider": "heygen"}
         
-    except Exception as heygen_error:
-        print(f"\n⚠️ [HEYGEN FALLÓ] {str(heygen_error)}")
-        print(f"🔄 [FALLBACK] Activando Motor Starter (Edge-TTS + Pexels)...")
+    except Exception as e:
+        heygen_error = str(e)
+        print(f"\n⚠️ [HEYGEN FALLÓ] {heygen_error[:100]}")
     
-    # === INTENTO 2: Motor Starter (Edge-TTS + Video Stock) ===
+    # === MOTOR 2: D-ID (Free tier - 5 min de video con avatar IA) ===
+    try:
+        from backend.services.did_service import generate_did_video
+        did_key = os.getenv("DID_API_KEY", "")
+        if not did_key:
+            raise Exception("DID_API_KEY no configurada. Obtén gratis: https://studio.d-id.com")
+        print(f"\n🎬 [MOTOR 2 - D-ID] Intentando avatar IA para proyecto #{project.id}...")
+        
+        render_result = await generate_did_video(
+            script=full_monologue,
+            avatar_id=avatar_id
+        )
+        
+        final_url = render_result.get("video_url")
+        if final_url and final_url.startswith("/"):
+            final_url = f"https://valgreen21-aigc-backend.hf.space{final_url}"
+        
+        project.video_url = final_url
+        project.status = "COMPLETADO"
+        db.commit()
+        return {"project_id": project.id, "video_url": final_url, "provider": "d-id"}
+        
+    except Exception as e:
+        did_error = str(e)
+        print(f"\n⚠️ [D-ID FALLÓ] {did_error[:100]}")
+    
+    # === MOTOR 3: Edge-TTS + Pexels (Siempre gratuito, busca videos UGC de personas) ===
     try:
         from backend.services.audio_service import generate_voiceover
         from backend.services.stock_video_service import download_background_video
         
-        # Mapeo de voces regionales Edge-TTS por avatar
         edge_voice_map = {
-            "sofia":  "es-CL-CatalinaNeural",   # Chilena
-            "mateo":  "es-MX-JorgeNeural",       # Mexicano
-            "elena":  "es-ES-ElviraNeural",       # Española
+            "sofia":  "es-CL-CatalinaNeural",
+            "mateo":  "es-MX-JorgeNeural",
+            "elena":  "es-ES-ElviraNeural",
         }
         selected_voice = edge_voice_map.get(avatar_id, "es-CL-CatalinaNeural")
         
-        # 1. Generar audio con voz regional
+        # 1. Audio con voz regional
         base_filename = f"voiceover_proj_{project.id}_{int(time.time())}"
         audio_path, srt_path = await generate_voiceover(full_monologue, base_filename, voice=selected_voice)
-        print(f"✅ Audio generado: {audio_path} (voz: {selected_voice})")
+        print(f"✅ Audio: {audio_path} ({selected_voice})")
         
-        # 2. Obtener video de fondo
+        # 2. Video de PERSONA hablando a cámara (estilo UGC, NO del producto)
+        ugc_person_queries = {
+            "sofia": "woman talking to camera review product",
+            "mateo": "man talking to camera review product",
+            "elena": "woman presenting product to camera energetic",
+        }
+        person_query = ugc_person_queries.get(avatar_id, "person talking to camera")
+        
         if project.custom_media_path and os.path.exists(project.custom_media_path):
             bg_video_path = project.custom_media_path
         else:
-            bg_video_path = await download_background_video(project.product_name)
-        print(f"✅ Video de fondo: {bg_video_path}")
+            bg_video_path = await download_background_video(person_query)
+        print(f"✅ Video persona: {bg_video_path}")
         
-        # 3. Servir el audio como resultado (el frontend reproduce audio + video por separado)
-        # En un futuro, aquí se puede ensamblar con FFmpeg si se agrega
-        final_url = f"https://valgreen21-aigc-backend.hf.space{audio_path}"
-        
-        # Si hay video de stock, lo usamos como URL del video
+        # Determinar URL final
         if bg_video_path and os.path.exists(bg_video_path):
             video_serve_path = f"/static/video/{os.path.basename(bg_video_path)}"
             final_url = f"https://valgreen21-aigc-backend.hf.space{video_serve_path}"
+        else:
+            final_url = f"https://valgreen21-aigc-backend.hf.space{audio_path}"
         
         project.video_url = final_url
         project.status = "COMPLETADO"
@@ -275,14 +308,15 @@ async def approve_and_render_project(project_id: int, db: Session = Depends(get_
             "project_id": project.id, 
             "video_url": final_url,
             "audio_url": f"https://valgreen21-aigc-backend.hf.space{audio_path}",
-            "provider": "edge_tts_fallback",
-            "voice": selected_voice
+            "provider": "edge_tts_ugc",
+            "voice": selected_voice,
+            "note": "Motor Starter: Persona de stock + voz IA regional. Para avatar IA personalizado, configura D-ID_API_KEY."
         }
         
     except Exception as fallback_error:
         raise HTTPException(
             status_code=500, 
-            detail=f"Ambos motores fallaron. HeyGen: {str(heygen_error)[:100]} | Edge-TTS: {str(fallback_error)[:100]}"
+            detail=f"Los 3 motores fallaron. HeyGen: {heygen_error[:80] if heygen_error else 'N/A'} | D-ID: {did_error[:80] if did_error else 'N/A'} | Edge-TTS: {str(fallback_error)[:80]}"
         )
 
 @router.get("/projects", status_code=status.HTTP_200_OK)

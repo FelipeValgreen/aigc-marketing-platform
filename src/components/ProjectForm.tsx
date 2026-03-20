@@ -194,8 +194,8 @@ export default function ProjectForm({ onSuccess }: { onSuccess: (data: any) => v
 function AvatarOption({ id, name, desc, active, onSelect }: any) {
   return (
     <div onClick={onSelect} className={`p-5 rounded-2xl border cursor-pointer transition-all ${active ? 'border-indigo-500 bg-indigo-500/10 shadow-[0_0_20px_rgba(99,102,241,0.2)]' : 'border-[#27272a] bg-[#09090b] hover:border-indigo-500/50'}`}>
-      <div className={`w-12 h-12 rounded-full mb-3 flex items-center justify-center ${active ? 'bg-indigo-500/20 text-indigo-400' : 'bg-[#27272a] text-neutral-400'}`}>
-        <UserCircle2 className="w-6 h-6" />
+      <div className={`w-14 h-14 rounded-full mb-3 overflow-hidden border-2 ${active ? 'border-indigo-500' : 'border-[#27272a]'}`}>
+        <img src={`/avatars/${id}.png`} alt={name} className="w-full h-full object-cover" />
       </div>
       <h4 className={`font-bold ${active ? 'text-white' : 'text-neutral-300'}`}>{name}</h4>
       <p className="text-xs text-neutral-500 mt-1">{desc}</p>
