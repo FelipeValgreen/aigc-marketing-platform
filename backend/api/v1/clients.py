@@ -19,7 +19,21 @@ async def onboarding_client(client_in: ClientCreate, db: Session = Depends(get_d
     # Verificamos si ya existe la URL ingresada
     existing_client = db.query(Client).filter(Client.website_url == str(client_in.website_url)).first()
     if existing_client:
-        raise HTTPException(status_code=400, detail="Ya existe un cliente con este sitio web registrado.")
+        print(f"🔄 Cliente existente detectado ({existing_client.company_name}). Recuperando información...")
+        guidelines = db.query(BrandGuidelines).filter(BrandGuidelines.client_id == existing_client.id).first()
+        return {
+            "client": {
+                "id": existing_client.id,
+                "company_name": existing_client.company_name,
+                "website_url": existing_client.website_url
+            },
+            "guidelines": {
+                "tone_of_voice": guidelines.tone_of_voice if guidelines else None,
+                "target_audience": guidelines.target_audience if guidelines else None,
+                "value_proposition": guidelines.value_proposition if guidelines else None,
+                "primary_color_hex": guidelines.primary_color_hex if guidelines else None
+            }
+        }
     
     # Crear el nuevo registro de cliente (se guarda como string)
     new_client = Client(
@@ -121,6 +135,7 @@ async def create_project(
     product_desc: str = Form(...),
     video_angle: str = Form("UGC Tradicional"),
     music_style: str = Form("Sin Música"),
+    avatar_id: str = Form("sofia"),
     custom_media: UploadFile = File(None),
     db: Session = Depends(get_db)):
     
@@ -145,6 +160,7 @@ async def create_project(
         product_desc=product_desc,
         video_angle=video_angle,
         music_style=music_style,
+        avatar_id=avatar_id,
         custom_media_path=custom_media_path,
         status="ESPERANDO_GUION"
     )
@@ -186,36 +202,35 @@ async def approve_and_render_project(project_id: int, db: Session = Depends(get_
     import os, json
     
     try:
-        from backend.services.audio_service import generate_voiceover
-        from backend.services.video_service import assemble_ugc_video
-        from backend.services.stock_video_service import download_background_video
-        
-        if project.custom_media_path:
-            bg_video_path = project.custom_media_path
-        else:
-            bg_video_path = await download_background_video(project.product_name)
+        from backend.services.video_service import generate_avatar_video
         
         script_dict = json.loads(project.script_json)
+        # Extraemos el guion completo como un monólogo hablando a cámara
         hook = script_dict.get('hook', {}).get('script', '')
         body = script_dict.get('body', {}).get('script', '')
         cta = script_dict.get('cta', {}).get('script', '')
-        full_text = f"{hook} {body} {cta}".strip()
+        full_monologue = f"{hook} {body} {cta}".strip()
         
-        audio_url, vtt_url = await generate_voiceover(full_text, base_filename)
+        # Mapeo de Voces (Mock) para que coincida con el Avatar
+        voice_map = {"sofia": "es-CL-CatalinaNeural", "mateo": "es-MX-JorgeNeural", "elena": "es-ES-ElviraNeural"}
+        selected_voice = voice_map.get(project.avatar_id, "es-CL-CatalinaNeural")
+
+        # Orquestación con el nuevo servicio de AVATARES (Paso al futuro HeyGen)
+        render_result = await generate_avatar_video(
+            script=full_monologue,
+            avatar_id=project.avatar_id or "sofia",
+            voice_id=selected_voice,
+            bg_video_path=project.custom_media_path
+        )
         
-        guidelines = db.query(BrandGuidelines).filter(BrandGuidelines.client_id == client_id).first()
-        brand_color = guidelines.primary_color_hex if guidelines and guidelines.primary_color_hex else "#FFFF00"
-        
-        video_url = await assemble_ugc_video(audio_url, vtt_url, video_filename, bg_video_path, project.music_style, brand_color)
-        
-        final_url = f"http://localhost:8000{video_url}"
+        final_url = f"http://localhost:8000{render_result.get('video_url')}"
         project.video_url = final_url
         project.status = "COMPLETADO"
         db.commit()
         
-        return {"project_id": project.id, "video_url": final_url}
+        return {"project_id": project.id, "video_url": final_url, "provider": render_result.get("provider")}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=f"Fallo en Orquestador de Avatares: {str(e)}")
     finally:
         def remove_if_exists(filepath):
             if filepath and os.path.exists(filepath):

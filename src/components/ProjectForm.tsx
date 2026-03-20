@@ -1,6 +1,6 @@
 "use client";
-import React, { useState } from "react";
-import { UploadCloud, CheckCircle2, ChevronRight, Wand2, Music, Film, ChevronLeft } from "lucide-react";
+import React, { useState, useRef } from "react";
+import { UploadCloud, CheckCircle2, ChevronRight, Wand2, Music, Film, ChevronLeft, UserCircle2 } from "lucide-react";
 import { api } from "@/lib/api";
 
 export default function ProjectForm({ onSuccess }: { onSuccess: (data: any) => void }) {
@@ -14,8 +14,10 @@ export default function ProjectForm({ onSuccess }: { onSuccess: (data: any) => v
     productDesc: "",
     angle: "Hard Selling",
     music: "Corporativo (Serio)",
+    avatarId: "sofia",
   });
   const [file, setFile] = useState<File | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const nextStep = () => setStep(prev => prev + 1);
   const prevStep = () => setStep(prev => prev - 1);
@@ -31,13 +33,14 @@ export default function ProjectForm({ onSuccess }: { onSuccess: (data: any) => v
     formData.append("product_desc", data.productDesc);
     formData.append("video_angle", data.angle);
     formData.append("music_style", data.music);
+    formData.append("avatar_id", data.avatarId);
     if (file) formData.append("custom_media", file);
 
     try {
       const res = await api.post("/clients/projects", formData);
       onSuccess(res.data);
     } catch (err: any) {
-      setErrorMsg(err.response?.data?.detail || "System Error. Verify Hugging Face Backend Status.");
+      setErrorMsg(err.response?.data?.detail || "System Error. Verify Backend API Connection.");
     } finally {
       setLoading(false);
     }
@@ -48,7 +51,7 @@ export default function ProjectForm({ onSuccess }: { onSuccess: (data: any) => v
       <div className="absolute -top-32 -right-32 w-64 h-64 bg-purple-500/10 blur-[100px] rounded-full pointer-events-none" />
 
       <div className="w-full flex gap-2 mb-10 relative z-10">
-        {[1, 2, 3].map((i) => (
+        {[1, 2, 3, 4].map((i) => (
           <div key={i} className={`h-1.5 flex-1 rounded-full transition-all duration-700 ${step >= i ? 'bg-indigo-500 shadow-[0_0_10px_rgba(99,102,241,0.5)]' : 'bg-[#27272a]'}`} />
         ))}
       </div>
@@ -62,7 +65,7 @@ export default function ProjectForm({ onSuccess }: { onSuccess: (data: any) => v
       {step === 1 && (
         <div className="animate-in slide-in-from-right-8 fade-in flex flex-col h-full duration-500 relative z-10">
           <h3 className="text-2xl font-bold text-white tracking-tight mb-2">Marca & Producto</h3>
-          <p className="text-neutral-400 text-sm mb-8">Paso 1: Asociaremos el render de Houdini con la identidad de tu empresa.</p>
+          <p className="text-neutral-400 text-sm mb-8">Paso 1: Asociaremos el guion a la identidad de tu empresa mediante IA.</p>
           <div className="space-y-5">
             <div>
               <label className="text-[11px] font-bold uppercase tracking-widest text-neutral-500 mb-1.5 block">Client ID</label>
@@ -115,25 +118,53 @@ export default function ProjectForm({ onSuccess }: { onSuccess: (data: any) => v
 
       {step === 3 && (
         <div className="animate-in slide-in-from-right-8 fade-in duration-500 relative z-10">
+          <h3 className="text-2xl font-bold text-white tracking-tight mb-2">Talent Selector</h3>
+          <p className="text-neutral-400 text-sm mb-8">Paso 3: Elige a tu Avatar UGC hiperrealista generado por IA.</p>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <AvatarOption id="sofia" name="Sofía" desc="Acento Chileno - Casual" active={data.avatarId === 'sofia'} onSelect={() => setData({...data, avatarId: 'sofia'})} />
+            <AvatarOption id="mateo" name="Mateo" desc="Acento Neutro - Corporativo" active={data.avatarId === 'mateo'} onSelect={() => setData({...data, avatarId: 'mateo'})} />
+            <AvatarOption id="elena" name="Elena" desc="Acento Español - Energética" active={data.avatarId === 'elena'} onSelect={() => setData({...data, avatarId: 'elena'})} />
+          </div>
+          <div className="flex gap-3 pt-4">
+             <button type="button" onClick={prevStep} className="px-5 bg-[#09090b] border border-[#27272a] text-white font-medium py-4 rounded-xl hover:bg-[#18181b] transition-all"><ChevronLeft className="w-5 h-5" /></button>
+             <button type="button" onClick={nextStep} className="flex-1 bg-white text-black font-semibold py-4 rounded-xl flex items-center justify-center gap-2 hover:bg-neutral-200 transition-all disabled:opacity-50">Siguiente <ChevronRight className="w-4 h-4" /></button>
+          </div>
+        </div>
+      )}
+
+      {step === 4 && (
+        <div className="animate-in slide-in-from-right-8 fade-in duration-500 relative z-10">
           <h3 className="text-2xl font-bold text-white tracking-tight mb-2">Pipeline de Medios</h3>
-          <p className="text-neutral-400 text-sm mb-8">Paso final: Adjunta el B-Roll en crudo o permite a la IA inyectar desde Pexels.</p>
+          <p className="text-neutral-400 text-sm mb-8">Paso final: Adjunta el B-Roll en crudo que la API integrará con tu Avatar.</p>
           <div className="space-y-6">
-            <label htmlFor="file-upload" className={`border-2 ${file ? 'border-indigo-500/50 bg-indigo-500/5' : 'border-dashed border-[#27272a] hover:border-indigo-500/50 hover:bg-indigo-500/5'} rounded-2xl p-12 text-center transition-all cursor-pointer block group`}>
-              <input id="file-upload" type="file" accept="*/*" className="hidden" onChange={e => setFile(e.target.files?.[0] || null)} />
+            <div 
+              onClick={() => fileInputRef.current?.click()}
+              className={`border-2 ${file ? 'border-indigo-500/50 bg-indigo-500/5' : 'border-dashed border-[#27272a] hover:border-indigo-500/50 hover:bg-indigo-500/5'} rounded-2xl p-12 text-center transition-all cursor-pointer block group`}
+            >
+              <input 
+                ref={fileInputRef} 
+                id="file-upload" 
+                type="file" 
+                accept="*/*" 
+                className="hidden" 
+                onChange={e => {
+                  if (e.target.files && e.target.files.length > 0) setFile(e.target.files[0]);
+                }} 
+              />
               {file ? (
                 <div className="animate-in zoom-in-95 duration-300">
                   <CheckCircle2 className="w-12 h-12 text-indigo-400 mx-auto mb-3" />
-                  <p className="text-indigo-400 font-medium">B-Roll Crudo Cargado</p>
+                  <p className="text-indigo-400 font-medium">B-Roll Adjuntado a API</p>
                   <p className="text-indigo-400/60 text-xs mt-1 truncate max-w-[200px] mx-auto">{file.name}</p>
                 </div>
               ) : (
                 <div>
                   <UploadCloud className="w-10 h-10 text-neutral-600 group-hover:text-indigo-400 mx-auto mb-4 transition-colors" />
-                  <p className="text-neutral-300 font-semibold mb-1">Arrastre o seleccione archivo aquí.</p>
-                  <p className="text-neutral-500 text-xs">Video o Imagen (Max. 50MB)</p>
+                  <p className="text-neutral-300 font-semibold mb-1">Arrastre o haga clic para subir.</p>
+                  <p className="text-neutral-500 text-xs">Archivos de referencias visuales o B-Roll</p>
                 </div>
               )}
-            </label>
+            </div>
             <div className="flex gap-3 pt-2">
               <button type="button" onClick={prevStep} disabled={loading} className="px-5 bg-[#09090b] border border-[#27272a] text-white font-medium py-4 rounded-xl hover:bg-[#18181b] transition-all disabled:opacity-50"><ChevronLeft className="w-5 h-5" /></button>
               <button type="submit" disabled={loading} className="flex-1 bg-indigo-500 text-white font-bold py-4 rounded-xl flex items-center justify-center gap-3 hover:bg-indigo-400 transition-all disabled:opacity-50 shadow-[0_0_20px_rgba(99,102,241,0.25)] relative overflow-hidden group">
@@ -145,5 +176,17 @@ export default function ProjectForm({ onSuccess }: { onSuccess: (data: any) => v
         </div>
       )}
     </form>
+  );
+}
+
+function AvatarOption({ id, name, desc, active, onSelect }: any) {
+  return (
+    <div onClick={onSelect} className={`p-5 rounded-2xl border cursor-pointer transition-all ${active ? 'border-indigo-500 bg-indigo-500/10 shadow-[0_0_20px_rgba(99,102,241,0.2)]' : 'border-[#27272a] bg-[#09090b] hover:border-indigo-500/50'}`}>
+      <div className={`w-12 h-12 rounded-full mb-3 flex items-center justify-center ${active ? 'bg-indigo-500/20 text-indigo-400' : 'bg-[#27272a] text-neutral-400'}`}>
+        <UserCircle2 className="w-6 h-6" />
+      </div>
+      <h4 className={`font-bold ${active ? 'text-white' : 'text-neutral-300'}`}>{name}</h4>
+      <p className="text-xs text-neutral-500 mt-1">{desc}</p>
+    </div>
   );
 }

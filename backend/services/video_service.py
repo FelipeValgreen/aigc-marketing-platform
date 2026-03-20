@@ -1,94 +1,131 @@
 import os
 import asyncio
-from backend.services.stock_video_service import download_background_video
+import httpx
+from dotenv import load_dotenv
 
-def hex_to_ass_color(hex_color: str) -> str:
-    """Convierte #RRGGBB a formato ASS de FFmpeg &HBBGGRR&"""
-    if not hex_color:
-        return "&H00FFFF&"
-    hex_color = hex_color.lstrip('#')
-    if len(hex_color) == 6:
-        r, g, b = hex_color[0:2], hex_color[2:4], hex_color[4:6]
-        return f"&H{b}{g}{r}&"
-    return "&H00FFFF&"
+# Cargar variables de entorno
+load_dotenv()
 
-async def assemble_ugc_video(audio_path: str, vtt_path: str, output_filename: str, bg_video_path: str = None, music_style: str = "Sin Música", primary_color_hex: str = "#FFFF00") -> str:
-    """
-    Ensambla el video final usando FFmpeg.
-    """
-    os.makedirs("static/video", exist_ok=True)
-    
-    # Remove leading slashes to get relative paths
-    audio_file = audio_path.lstrip('/')
-    vtt_file = vtt_path.lstrip('/')
-    
-    valid_exts = ('.mp4', '.mov', '.avi', '.jpg', '.jpeg', '.png')
-    if not bg_video_path or not bg_video_path.lower().endswith(valid_exts):
-        print("Ignorando archivo no compatible (ej. PDF). Retornando a Pexels AI...")
-        bg_video_path = await download_background_video(output_filename.split('_')[1] if output_filename else "abstract")
-        
-    bg_video = bg_video_path.lstrip('/')
-    output_filepath = os.path.join("static", "video", output_filename)
-    
-    if not os.path.exists(bg_video):
-        raise FileNotFoundError(f"El video de fondo {bg_video} no existe. Por favor descárgalo.")
-        
-    # ass_color = hex_to_ass_color(primary_color_hex)
-    # vtt_filter_path = vtt_file.replace('\\', '/')
-    # sub_filter = f"subtitles={vtt_filter_path}"
-    
-    music_map = {
-        "Upbeat (Dinámico)": "upbeat.mp3",
-        "Corporativo (Serio)": "corporativo.mp3",
-        "Lo-Fi (Relajado)": "lofi.mp3"
+HEYGEN_API_KEY = os.getenv("HEYGEN_API_KEY")
+HEYGEN_GENERATE_URL = "https://api.heygen.com/v2/video/generate"
+HEYGEN_STATUS_URL = "https://api.heygen.com/v1/video_status.get"
+
+# Mapeo de Talento a IDs Reales de HeyGen
+TALENT_MAPPING = {
+    "sofia": {
+        "avatar_id": "Daisy-casual-20220718",
+        "voice_id": "es-CL-CatalinaNeural"
+    },
+    "mateo": {
+        "avatar_id": "Eleno-in-suit-20220718",
+        "voice_id": "es-MX-JorgeNeural"
+    },
+    "elena": {
+        "avatar_id": "May-casual-20220718",
+        "voice_id": "es-ES-ElviraNeural"
     }
-    music_path = None
-    if music_style and music_style in music_map:
-        m_path = os.path.join("static", "music", music_map[music_style])
-        if os.path.exists(m_path):
-            music_path = m_path
+}
+
+async def generate_avatar_video(script: str, avatar_id: str, voice_id: str, bg_video_path: str = None) -> dict:
+    """
+    Orquestación Real con HeyGen API V2.
+    Solicita el video, realiza polling del status y descarga el resultado final.
+    """
+    if not HEYGEN_API_KEY:
+        raise Exception("HEYGEN_API_KEY no configurada. Verifica tu archivo .env")
+
+    # Obtener IDs reales según la selección del usuario
+    talent = TALENT_MAPPING.get(avatar_id.lower(), TALENT_MAPPING["sofia"])
     
-    cmd = ["ffmpeg", "-y"]
+    headers = {
+        "X-Api-Key": HEYGEN_API_KEY,
+        "Content-Type": "application/json"
+    }
+
+    # Estructura de Payload según HeyGen API V2
+    payload = {
+        "video_inputs": [
+            {
+                "character": {
+                    "type": "avatar",
+                    "avatar_id": talent["avatar_id"],
+                    "avatar_style": "normal"
+                },
+                "voice": {
+                    "type": "text",
+                    "input_text": script,
+                    "voice_id": talent["voice_id"]
+                }
+            }
+        ],
+        "dimension": {
+            "width": 1080,
+            "height": 1920
+        }
+    }
+
+    print(f"\n🚀 Despachando solicitud a HeyGen V2 para Avatar: {avatar_id}")
     
-    if bg_video.lower().endswith(('.jpg', '.jpeg', '.png')):
-        cmd.extend(["-loop", "1", "-i", bg_video])
-        vf_chain = f"scale=-1:1920,crop=1080:1920"
-        is_image = True
-    else:
-        cmd.extend(["-stream_loop", "-1", "-i", bg_video])
-        vf_chain = f"crop=ih*(9/16):ih"
-        is_image = False
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        # Paso A: Iniciar Generación
+        response = await client.post(HEYGEN_GENERATE_URL, json=payload, headers=headers)
         
-    cmd.extend(["-i", audio_file])
-    
-    if music_path:
-        cmd.extend(["-stream_loop", "-1", "-i", music_path])
-        audio_filter = "[1:a]volume=1.0[a1];[2:a]volume=0.15[a2];[a1][a2]amix=inputs=2:duration=first:dropout_transition=2[a_out]"
-        cmd.extend(["-filter_complex", f"[0:v]{vf_chain}[v_out];{audio_filter}"])
-        cmd.extend(["-map", "[v_out]", "-map", "[a_out]"])
-    else:
-        cmd.extend(["-vf", vf_chain])
+        if response.status_code != 200:
+            error_detail = response.json().get("message", "Error desconocido en HeyGen")
+            raise Exception(f"Fallo al iniciar video: {error_detail}")
+
+        video_id = response.json().get("data", {}).get("video_id")
+        if not video_id:
+            raise Exception("No se recibió video_id de HeyGen")
+
+        print(f"✅ Video encolado. ID: {video_id}. Iniciando Polling...")
+
+        # Paso B: Polling (Esperar a que el video esté listo)
+        status_headers = {
+            "accept": "application/json",
+            "X-Api-Key": HEYGEN_API_KEY
+        }
         
-    cmd.extend(["-shortest", "-c:v", "libx264"])
-    
-    if is_image:
-        cmd.extend(["-tune", "stillimage"])
+        max_attempts = 60  # Aproximadamente 5 minutos
+        attempts = 0
+        final_video_url = None
+
+        while attempts < max_attempts:
+            status_res = await client.get(f"{HEYGEN_STATUS_URL}?video_id={video_id}", headers=status_headers)
+            
+            if status_res.status_code == 200:
+                data = status_res.json().get("data", {})
+                status = data.get("status")
+                
+                if status == "completed":
+                    final_video_url = data.get("video_url")
+                    print(f"\n✨ HeyGen Render Completado!")
+                    break
+                elif status == "failed":
+                    error_msg = data.get("error", "Error interno de HeyGen")
+                    raise Exception(f"El renderizado de HeyGen falló: {error_msg}")
+                else:
+                    print(f"⏳ Procesando AI Avatar ({status})...", end="\r")
+            
+            await asyncio.sleep(10)
+            attempts += 1
         
-    cmd.extend(["-c:a", "aac"])
-    if is_image:
-        cmd.extend(["-pix_fmt", "yuv420p"])
+        if not final_video_url:
+            raise Exception("Tiempo de espera agotado para el render de HeyGen")
+
+        # Paso C: Descargar para persistencia local
+        os.makedirs("static/video", exist_ok=True)
+        local_filename = f"heygen_ugc_{video_id}.mp4"
+        local_path = os.path.join("static", "video", local_filename)
         
-    cmd.extend([output_filepath])
-    
-    process = await asyncio.create_subprocess_exec(
-        *cmd,
-        stdout=asyncio.subprocess.PIPE,
-        stderr=asyncio.subprocess.PIPE
-    )
-    
-    stdout, stderr = await process.communicate()
-    
-    if process.returncode != 0:
-        raise Exception(f"FFmpeg falló: {stderr.decode()}")
-        
-    return f"/static/video/{output_filename}"
+        print(f"📥 Descargando render final desde HeyGen...")
+        video_data = await client.get(final_video_url)
+        with open(local_path, "wb") as f:
+            f.write(video_data.content)
+
+        return {
+            "status": "success",
+            "video_url": f"/static/video/{local_filename}",
+            "provider": "heygen_active",
+            "avatar_id": avatar_id
+        }

@@ -62,6 +62,7 @@ class Project(Base):
     music_style = Column(String, nullable=True)
     status = Column(String, default="ESPERANDO_GUION")
     script_json = Column(Text, nullable=True)
+    avatar_id = Column(String, nullable=True)
     video_url = Column(String, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 

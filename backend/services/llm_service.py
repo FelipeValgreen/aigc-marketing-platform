@@ -70,9 +70,21 @@ async def generate_video_script(brand_context: dict, product_info: str, angle: s
     if not api_key or api_key == "tu_api_key_aqui":
         raise Exception("API Key de Gemini no configurada correctamente en el archivo .env")
         
-    prompt = f"""Eres un creador de contenido UGC experto en TikTok y Reels. Escribe un guion de 30 segundos para un video promocional del siguiente producto: {product_info}. DEBES adoptar estrictamente el siguiente tono de voz: {brand_context.get('tone_of_voice', 'normal')} y dirigirte a este público: {brand_context.get('target_audience', 'general')}. La estructura y enfoque psicológico del guion debe ser ESTRICTAMENTE un formato de: [{angle}]. Adapta el gancho, el cuerpo y el CTA a este formato específico. La propuesta de valor central de la empresa es: {brand_context.get('value_proposition', '')}. 
-Devuelve ÚNICAMENTE un JSON puro con tres claves principales: 'hook', 'body' y 'cta'. 
-Cada una de esas claves DEBE ser un objeto JSON que contenga exactamente dos claves internas: 'script' (el texto exacto que el actor debe decir) y 'visuals' (instrucciones breves de dirección de cámara o texto en pantalla)."""
+    prompt = f"""Eres un Director de Guiones para Avatares de IA hiperrealistas (estilo HeyGen/Synthesia). 
+Escribe un monólogo persuasivo de 30 segundos para un video promocional del siguiente producto: {product_info}. 
+EL AVATAR HABLARÁ DIRECTO A LA CÁMARA.
+
+DEBES:
+1. Adoptar estrictamente este tono de voz: {brand_context.get('tone_of_voice', 'normal')}.
+2. Dirigirte a este público: {brand_context.get('target_audience', 'general')}.
+3. Seguir el enfoque psicológico de: [{angle}].
+4. La propuesta de valor central es: {brand_context.get('value_proposition', '')}.
+
+Devuelve ÚNICAMENTE un JSON puro con tres claves: 'hook', 'body' y 'cta'.
+Cada clave DEBE ser un objeto con:
+- 'script': El texto exacto que el AVATAR dirá (natural, conversacional, con pausas).
+- 'visuals': Instrucciones breves de lenguaje corporal o emoción (ej: "Sonrisa cálida", "Gesto de duda", "Señalando a la cámara").
+"""
 
     model = genai.GenerativeModel('gemini-2.5-flash')
     
