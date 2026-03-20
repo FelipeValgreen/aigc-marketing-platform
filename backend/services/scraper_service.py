@@ -10,9 +10,13 @@ async def scrape_website_text(url: str) -> dict:
     }
     
     try:
-        async with httpx.AsyncClient(headers=headers, timeout=15.0, follow_redirects=True) as client:
+        # verify=False para evitar errores de certificados SSL antiguos/mal configurados
+        async with httpx.AsyncClient(headers=headers, timeout=12.0, follow_redirects=True, verify=False) as client:
             response = await client.get(url)
-            response.raise_for_status()
+            # Si el sitio bloquea el acceso (403/401), intentamos seguir con lo que haya
+            if response.status_code != 200:
+                print(f"⚠️ [SCRAPER] El sitio respondió con status {response.status_code}. Usando fallback.")
+                return {"url": url, "title": "", "description": "", "content": "", "brand_colors": {}}
             
             soup = BeautifulSoup(response.text, 'html.parser')
             

@@ -46,36 +46,43 @@ async def onboarding_client(client_in: ClientCreate, db: Session = Depends(get_d
     db.refresh(new_client)
     
     # Invocar el scraper y LLM de forma asíncrona
+    # Valores por defecto por si falla el scraping/LLM
+    content = ""
+    brand_colors = {}
+    llm_result = {}
+    
+    # Intento de extracción inteligente
     try:
-        print(f"\n🚀 Iniciando scraping para la URL: {new_client.website_url}")
+        print(f"\n🚀 Iniciando extracción ADN para: {new_client.website_url}")
         scraped_data = await scrape_website_text(new_client.website_url)
-        content = scraped_data['content']
+        content = scraped_data.get('content', '')
         brand_colors = scraped_data.get('brand_colors', {})
         
-        print(f"🧠 Escrapeado exitoso. Colores detectados: {brand_colors.get('detected_colors', [])[:5]}")
-        print(f"🎨 Color más frecuente: {brand_colors.get('most_frequent', 'N/A')}")
-        print(f"🧠 Iniciando análisis LLM con Gemini...")
-        llm_result = await analyze_brand_voice(content, brand_colors=brand_colors)
-        
-        # Crear y guardar en BrandGuidelines asociado al cliente
-        new_guidelines = BrandGuidelines(
-            client_id=new_client.id,
-            tone_of_voice=llm_result.get('tone_of_voice', ''),
-            target_audience=llm_result.get('target_audience', ''),
-            value_proposition=llm_result.get('value_proposition', ''),
-            primary_color_hex=llm_result.get('primary_color_hex', '#FFFF00')
-        )
-        db.add(new_guidelines)
-        db.commit()
-        
-        print("--- RESULTADO DEL LLM GUARDADO EN DB ---")
-        print(f"Tono de Voz: {new_guidelines.tone_of_voice}")
-        print(f"Público Objetivo: {llm_result.get('target_audience')}")
-        print(f"Propuesta de Valor: {llm_result.get('value_proposition')}")
-        print("----------------------------------------\n")
+        print(f"🧠 Scrapeado exitoso. Iniciando análisis LLM con Gemini...")
+        llm_result = await analyze_brand_voice(content, company_name=new_client.company_name, brand_colors=brand_colors)
+        print("✅ Análisis IA completado.")
         
     except Exception as e:
-        print(f"\n❌ Error en el proceso (Scraper/LLM) para {new_client.website_url}: {str(e)}\n")
+        print(f"\n⚠️ Falló la extracción ADN inteligente: {str(e)}. Usando proceso genérico para no interrumpir el flujo.")
+        # Generar guías básicas basadas en el nombre por defecto
+        llm_result = {
+            "tone_of_voice": "Profesional, informativo y confiable.",
+            "target_audience": "Público general interesado en el rubro.",
+            "value_proposition": f"Excelencia en servicios relacionados con {new_client.company_name}.",
+            "primary_color_hex": "#3B82F6" # Azul moderno por defecto
+        }
+
+    # === CREAR SIEMPRE LAS BRAND GUIDELINES PARA NO BLOQUEAR EL FRONTEND ===
+    new_guidelines = BrandGuidelines(
+        client_id=new_client.id,
+        tone_of_voice=llm_result.get('tone_of_voice', 'Profesional'),
+        target_audience=llm_result.get('target_audience', 'Empresas y particulares'),
+        value_proposition=llm_result.get('value_proposition', f"Servicio premium de {new_client.company_name}"),
+        primary_color_hex=llm_result.get('primary_color_hex', '#3B82F6')
+    )
+    db.add(new_guidelines)
+    db.commit()
+    print(f"✅ ADN de {new_client.company_name} registrado en base de datos. (Status: OK)\n")
     
     return {
         "client": {
@@ -84,10 +91,10 @@ async def onboarding_client(client_in: ClientCreate, db: Session = Depends(get_d
             "website_url": new_client.website_url
         },
         "guidelines": {
-            "tone_of_voice": new_guidelines.tone_of_voice if 'new_guidelines' in locals() else None,
-            "target_audience": new_guidelines.target_audience if 'new_guidelines' in locals() else None,
-            "value_proposition": new_guidelines.value_proposition if 'new_guidelines' in locals() else None,
-            "primary_color_hex": new_guidelines.primary_color_hex if 'new_guidelines' in locals() else None
+            "tone_of_voice": new_guidelines.tone_of_voice,
+            "target_audience": new_guidelines.target_audience,
+            "value_proposition": new_guidelines.value_proposition,
+            "primary_color_hex": new_guidelines.primary_color_hex
         }
     }
 
