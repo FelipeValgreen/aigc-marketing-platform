@@ -33,9 +33,9 @@ async def assemble_ugc_video(audio_path: str, vtt_path: str, output_filename: st
     if not os.path.exists(bg_video):
         raise FileNotFoundError(f"El video de fondo {bg_video} no existe. Por favor descárgalo.")
         
-    ass_color = hex_to_ass_color(primary_color_hex)
-    vtt_filter_path = vtt_file.replace('\\', '/')
-    sub_filter = f"subtitles={vtt_filter_path}:force_style='Fontname=Arial,FontSize=24,PrimaryColour={ass_color},Outline=1,Shadow=1,Alignment=2,MarginV=20'"
+    # ass_color = hex_to_ass_color(primary_color_hex)
+    # vtt_filter_path = vtt_file.replace('\\', '/')
+    # sub_filter = f"subtitles={vtt_filter_path}"
     
     music_map = {
         "Upbeat (Dinámico)": "upbeat.mp3",
@@ -52,11 +52,11 @@ async def assemble_ugc_video(audio_path: str, vtt_path: str, output_filename: st
     
     if bg_video.lower().endswith(('.jpg', '.jpeg', '.png')):
         cmd.extend(["-loop", "1", "-i", bg_video])
-        vf_chain = f"scale=-1:1920,crop=1080:1920,{sub_filter}"
+        vf_chain = f"scale=-1:1920,crop=1080:1920"
         is_image = True
     else:
         cmd.extend(["-stream_loop", "-1", "-i", bg_video])
-        vf_chain = f"crop=ih*(9/16):ih,{sub_filter}"
+        vf_chain = f"crop=ih*(9/16):ih"
         is_image = False
         
     cmd.extend(["-i", audio_file])

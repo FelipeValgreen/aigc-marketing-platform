@@ -15,16 +15,16 @@ async def generate_voiceover(text: str, filename: str, voice: str = "es-CL-Catal
     os.makedirs("static/audio", exist_ok=True)
     
     mp3_filepath = os.path.join("static", "audio", f"{filename}.mp3")
-    vtt_filepath = os.path.join("static", "audio", f"{filename}.vtt")
+    vtt_filepath = os.path.join("static", "audio", f"{filename}.srt")
     
     async with aiofiles.open(mp3_filepath, "wb") as audio_file:
         async for chunk in communicate.stream():
             if chunk["type"] == "audio":
                 await audio_file.write(chunk["data"])
             elif chunk["type"] == "WordBoundary":
-                submaker.create_sub((chunk["offset"], chunk["duration"]), chunk["text"])
+                submaker.feed(chunk)
                 
     async with aiofiles.open(vtt_filepath, "w", encoding="utf-8") as vtt_file:
-        await vtt_file.write(submaker.generate_subs())
+        await vtt_file.write(submaker.get_srt())
     
-    return f"/static/audio/{filename}.mp3", f"/static/audio/{filename}.vtt"
+    return f"/static/audio/{filename}.mp3", f"/static/audio/{filename}.srt"
