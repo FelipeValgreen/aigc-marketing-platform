@@ -17,6 +17,7 @@ export default function ProjectForm({ onSuccess }: { onSuccess: (data: any) => v
     avatarId: "sofia",
   });
   const [file, setFile] = useState<File | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const nextStep = () => setStep(prev => prev + 1);
@@ -138,14 +139,24 @@ export default function ProjectForm({ onSuccess }: { onSuccess: (data: any) => v
           <p className="text-neutral-400 text-sm mb-8">Paso final: Adjunta el B-Roll en crudo que la API integrará con tu Avatar.</p>
           <div className="space-y-6">
             <div 
-              onClick={() => fileInputRef.current?.click()}
-              className={`border-2 ${file ? 'border-indigo-500/50 bg-indigo-500/5' : 'border-dashed border-[#27272a] hover:border-indigo-500/50 hover:bg-indigo-500/5'} rounded-2xl p-12 text-center transition-all cursor-pointer block group`}
+              onClick={(e) => { e.preventDefault(); e.stopPropagation(); fileInputRef.current?.click(); }}
+              onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); setIsDragging(true); }}
+              onDragEnter={(e) => { e.preventDefault(); e.stopPropagation(); setIsDragging(true); }}
+              onDragLeave={(e) => { e.preventDefault(); e.stopPropagation(); setIsDragging(false); }}
+              onDrop={(e) => {
+                e.preventDefault(); e.stopPropagation(); setIsDragging(false);
+                if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                  setFile(e.dataTransfer.files[0]);
+                  e.dataTransfer.clearData();
+                }
+              }}
+              className={`border-2 ${isDragging ? 'border-indigo-400 bg-indigo-500/20 scale-[1.02]' : file ? 'border-indigo-500/50 bg-indigo-500/5' : 'border-dashed border-[#27272a] hover:border-indigo-500/50 hover:bg-indigo-500/5'} rounded-2xl p-12 text-center transition-all cursor-pointer block group`}
             >
               <input 
                 ref={fileInputRef} 
                 id="file-upload" 
                 type="file" 
-                accept="*/*" 
+                accept="image/*,video/*,.pdf,.doc,.docx" 
                 className="hidden" 
                 onChange={e => {
                   if (e.target.files && e.target.files.length > 0) setFile(e.target.files[0]);
@@ -156,12 +167,13 @@ export default function ProjectForm({ onSuccess }: { onSuccess: (data: any) => v
                   <CheckCircle2 className="w-12 h-12 text-indigo-400 mx-auto mb-3" />
                   <p className="text-indigo-400 font-medium">B-Roll Adjuntado a API</p>
                   <p className="text-indigo-400/60 text-xs mt-1 truncate max-w-[200px] mx-auto">{file.name}</p>
+                  <button type="button" onClick={(e) => { e.stopPropagation(); setFile(null); if(fileInputRef.current) fileInputRef.current.value = ''; }} className="mt-3 text-xs text-red-400/70 hover:text-red-400 underline">Quitar archivo</button>
                 </div>
               ) : (
                 <div>
-                  <UploadCloud className="w-10 h-10 text-neutral-600 group-hover:text-indigo-400 mx-auto mb-4 transition-colors" />
-                  <p className="text-neutral-300 font-semibold mb-1">Arrastre o haga clic para subir.</p>
-                  <p className="text-neutral-500 text-xs">Archivos de referencias visuales o B-Roll</p>
+                  <UploadCloud className={`w-10 h-10 ${isDragging ? 'text-indigo-400 animate-bounce' : 'text-neutral-600 group-hover:text-indigo-400'} mx-auto mb-4 transition-colors`} />
+                  <p className="text-neutral-300 font-semibold mb-1">{isDragging ? '¡Suelta aquí!' : 'Arrastre o haga clic para subir.'}</p>
+                  <p className="text-neutral-500 text-xs">Imágenes, Videos o Documentos de referencia</p>
                 </div>
               )}
             </div>

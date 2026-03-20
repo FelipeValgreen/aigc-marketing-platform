@@ -10,19 +10,19 @@ HEYGEN_API_KEY = os.getenv("HEYGEN_API_KEY")
 HEYGEN_GENERATE_URL = "https://api.heygen.com/v2/video/generate"
 HEYGEN_STATUS_URL = "https://api.heygen.com/v1/video_status.get"
 
-# Mapeo de Talento a IDs Reales de HeyGen
+# Mapeo de Talento a IDs REALES de HeyGen (verificados via API)
 TALENT_MAPPING = {
     "sofia": {
-        "avatar_id": "Daisy-casual-20220718",
-        "voice_id": "es-CL-CatalinaNeural"
+        "avatar_id": "Daisy-insuit-20220818",
+        "voice_id": "1eca26cb214c4f66976339251282b341"  # Camila Vega - Friendly
     },
     "mateo": {
-        "avatar_id": "Eleno-in-suit-20220718",
-        "voice_id": "es-MX-JorgeNeural"
+        "avatar_id": "Tyler-incasualsuit-20220721",
+        "voice_id": "29d36a2c7ebf417f84176fc7fc4a8a1f"  # Rafael Cruz
     },
     "elena": {
-        "avatar_id": "May-casual-20220718",
-        "voice_id": "es-ES-ElviraNeural"
+        "avatar_id": "Daisy-inskirt-20220818",
+        "voice_id": "689f48196a9a43c4bbbb67c14fdbb4c6"  # Sara Martin
     }
 }
 

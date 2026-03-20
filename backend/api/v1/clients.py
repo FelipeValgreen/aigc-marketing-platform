@@ -50,9 +50,12 @@ async def onboarding_client(client_in: ClientCreate, db: Session = Depends(get_d
         print(f"\n🚀 Iniciando scraping para la URL: {new_client.website_url}")
         scraped_data = await scrape_website_text(new_client.website_url)
         content = scraped_data['content']
+        brand_colors = scraped_data.get('brand_colors', {})
         
-        print(f"🧠 Escrapeado exitoso. Iniciando análisis LLM con Gemini...")
-        llm_result = await analyze_brand_voice(content)
+        print(f"🧠 Escrapeado exitoso. Colores detectados: {brand_colors.get('detected_colors', [])[:5]}")
+        print(f"🎨 Color más frecuente: {brand_colors.get('most_frequent', 'N/A')}")
+        print(f"🧠 Iniciando análisis LLM con Gemini...")
+        llm_result = await analyze_brand_voice(content, brand_colors=brand_colors)
         
         # Crear y guardar en BrandGuidelines asociado al cliente
         new_guidelines = BrandGuidelines(

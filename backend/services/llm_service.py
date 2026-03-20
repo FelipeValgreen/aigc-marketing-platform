@@ -11,22 +11,46 @@ api_key = os.getenv("GEMINI_API_KEY")
 if api_key and api_key != "tu_api_key_aqui":
     genai.configure(api_key=api_key)
 
-async def analyze_brand_voice(website_text: str) -> dict:
+async def analyze_brand_voice(website_text: str, brand_colors: dict = None) -> dict:
     """
-    Analiza el texto de una web y extrae el perfil de marca usando Gemini 1.5 Flash.
+    Analiza el texto de una web y extrae el perfil de marca usando Gemini.
+    Ahora recibe colores reales extraídos del CSS/HTML del sitio.
     """
     if not api_key or api_key == "tu_api_key_aqui":
         raise Exception("API Key de Gemini no configurada correctamente en el archivo .env")
 
-    # Limitar a 3000 caracteres para no saturar el token limit
     text_to_analyze = website_text[:3000]
     
-    prompt = f"""Eres un estratega de marketing. Analiza el siguiente texto extraído de una página web y define el perfil de la marca. 
-Devuelve ÚNICAMENTE un objeto JSON puro (SIN texto adicional, SIN usar bloques de código Markdown) con las siguientes claves: 
-'tone_of_voice' (ej. formal, industrial, cercano), 
-'target_audience' (descripción breve del cliente ideal), 
-'value_proposition' (qué problema resuelven) y
-'primary_color_hex' (Intenta adivinar el color principal de la marca en base al sector si no es obvio, en formato HEX, ej: #FF0000. Si dudas, usa #FFFF00).
+    # Construir contexto de colores para el LLM
+    color_context = ""
+    if brand_colors:
+        detected = brand_colors.get("detected_colors", [])
+        sources = brand_colors.get("color_sources", {})
+        most_freq = brand_colors.get("most_frequent")
+        logo_urls = brand_colors.get("logo_urls", [])
+        
+        color_context = f"""
+
+DATOS DE COLORES EXTRAÍDOS DEL SITIO WEB (REALES, NO INVENTADOS):
+- Colores detectados en CSS/HTML (ordenados por frecuencia): {', '.join(detected[:8]) if detected else 'No se detectaron colores'}
+- Color más frecuente en el sitio: {most_freq or 'No detectado'}
+- Fuentes de cada color: {json.dumps(sources, ensure_ascii=False) if sources else 'N/A'}
+- URLs de logo/favicon encontradas: {', '.join(logo_urls) if logo_urls else 'No encontradas'}
+
+INSTRUCCIÓN CRÍTICA PARA EL COLOR:
+- El color primario DEBE ser el color real del logo o la identidad visual de la marca.
+- Prioriza: (1) meta theme-color, (2) CSS variables con nombre 'primary/brand/accent', (3) color de botones principales, (4) color más frecuente no-neutro.
+- NUNCA adivines un color genérico del sector. USA los datos reales de arriba.
+- Si los datos muestran un color claro como primario pero hay uno más saturado/vibrante como secundario, elige el más vibrante como primario de marca.
+"""
+
+    prompt = f"""Eres un estratega de marketing y diseñador de identidad corporativa senior. Analiza el siguiente texto extraído de una página web y define el perfil EXACTO de la marca.
+{color_context}
+Devuelve ÚNICAMENTE un objeto JSON puro (SIN texto adicional, SIN bloques de código Markdown) con estas claves: 
+'tone_of_voice' (ej. formal, industrial, cercano - sé específico y detallado),
+'target_audience' (descripción precisa del cliente ideal, incluyendo ubicación geográfica si la detectas),
+'value_proposition' (qué problema específico resuelven y cómo) y
+'primary_color_hex' (el color REAL de la marca en formato HEX basado en los datos de colores extraídos arriba. NO adivines. Si no hay datos de color, analiza el nombre de la empresa y su sector para una estimación educada).
 
 Texto de la web:
 {text_to_analyze}
