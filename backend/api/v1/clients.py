@@ -196,53 +196,94 @@ async def approve_and_render_project(project_id: int, db: Session = Depends(get_
     if not project:
         raise HTTPException(status_code=404, detail="Proyecto no encontrado")
         
-    client_id = project.client_id
-    base_filename = f"voiceover_proj_{project.id}_{int(time.time())}"
-    video_filename = f"ugc_proj_{project.id}_{int(time.time())}.mp4"
-    audio_url = None
-    vtt_url = None
-    bg_video_path = None
     import os, json
     
+    script_dict = json.loads(project.script_json)
+    hook = script_dict.get('hook', {}).get('script', '')
+    body = script_dict.get('body', {}).get('script', '')
+    cta = script_dict.get('cta', {}).get('script', '')
+    full_monologue = f"{hook} {body} {cta}".strip()
+    
+    avatar_id = project.avatar_id or "sofia"
+    
+    # === INTENTO 1: Motor Premium (HeyGen) ===
     try:
         from backend.services.video_service import generate_avatar_video
+        print(f"\n🎬 [MOTOR PREMIUM] Intentando HeyGen para proyecto #{project.id}...")
         
-        script_dict = json.loads(project.script_json)
-        # Extraemos el guion completo como un monólogo hablando a cámara
-        hook = script_dict.get('hook', {}).get('script', '')
-        body = script_dict.get('body', {}).get('script', '')
-        cta = script_dict.get('cta', {}).get('script', '')
-        full_monologue = f"{hook} {body} {cta}".strip()
-        
-        # Mapeo de Voces (Mock) para que coincida con el Avatar
-        voice_map = {"sofia": "es-CL-CatalinaNeural", "mateo": "es-MX-JorgeNeural", "elena": "es-ES-ElviraNeural"}
-        selected_voice = voice_map.get(project.avatar_id, "es-CL-CatalinaNeural")
-
-        # Orquestación con el nuevo servicio de AVATARES (Paso al futuro HeyGen)
         render_result = await generate_avatar_video(
             script=full_monologue,
-            avatar_id=project.avatar_id or "sofia",
-            voice_id=selected_voice,
+            avatar_id=avatar_id,
+            voice_id="",  # video_service usa su propio mapeo interno
             bg_video_path=project.custom_media_path
         )
         
-        final_url = f"http://localhost:8000{render_result.get('video_url')}"
+        final_url = render_result.get("video_url")
+        # Si es ruta local, prefijamos con el host
+        if final_url and final_url.startswith("/"):
+            final_url = f"https://valgreen21-aigc-backend.hf.space{final_url}"
+        
         project.video_url = final_url
         project.status = "COMPLETADO"
         db.commit()
         
-        return {"project_id": project.id, "video_url": final_url, "provider": render_result.get("provider")}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Fallo en Orquestador de Avatares: {str(e)}")
-    finally:
-        def remove_if_exists(filepath):
-            if filepath and os.path.exists(filepath):
-                try: os.remove(filepath)
-                except: pass
-        if audio_url: remove_if_exists(audio_url.lstrip('/'))
-        if vtt_url: remove_if_exists(vtt_url.lstrip('/'))
-        if bg_video_path and os.path.basename(bg_video_path).startswith("bg_"):
-            remove_if_exists(bg_video_path.lstrip('/'))
+        return {"project_id": project.id, "video_url": final_url, "provider": "heygen"}
+        
+    except Exception as heygen_error:
+        print(f"\n⚠️ [HEYGEN FALLÓ] {str(heygen_error)}")
+        print(f"🔄 [FALLBACK] Activando Motor Starter (Edge-TTS + Pexels)...")
+    
+    # === INTENTO 2: Motor Starter (Edge-TTS + Video Stock) ===
+    try:
+        from backend.services.audio_service import generate_voiceover
+        from backend.services.stock_video_service import download_background_video
+        
+        # Mapeo de voces regionales Edge-TTS por avatar
+        edge_voice_map = {
+            "sofia":  "es-CL-CatalinaNeural",   # Chilena
+            "mateo":  "es-MX-JorgeNeural",       # Mexicano
+            "elena":  "es-ES-ElviraNeural",       # Española
+        }
+        selected_voice = edge_voice_map.get(avatar_id, "es-CL-CatalinaNeural")
+        
+        # 1. Generar audio con voz regional
+        base_filename = f"voiceover_proj_{project.id}_{int(time.time())}"
+        audio_path, srt_path = await generate_voiceover(full_monologue, base_filename, voice=selected_voice)
+        print(f"✅ Audio generado: {audio_path} (voz: {selected_voice})")
+        
+        # 2. Obtener video de fondo
+        if project.custom_media_path and os.path.exists(project.custom_media_path):
+            bg_video_path = project.custom_media_path
+        else:
+            bg_video_path = await download_background_video(project.product_name)
+        print(f"✅ Video de fondo: {bg_video_path}")
+        
+        # 3. Servir el audio como resultado (el frontend reproduce audio + video por separado)
+        # En un futuro, aquí se puede ensamblar con FFmpeg si se agrega
+        final_url = f"https://valgreen21-aigc-backend.hf.space{audio_path}"
+        
+        # Si hay video de stock, lo usamos como URL del video
+        if bg_video_path and os.path.exists(bg_video_path):
+            video_serve_path = f"/static/video/{os.path.basename(bg_video_path)}"
+            final_url = f"https://valgreen21-aigc-backend.hf.space{video_serve_path}"
+        
+        project.video_url = final_url
+        project.status = "COMPLETADO"
+        db.commit()
+        
+        return {
+            "project_id": project.id, 
+            "video_url": final_url,
+            "audio_url": f"https://valgreen21-aigc-backend.hf.space{audio_path}",
+            "provider": "edge_tts_fallback",
+            "voice": selected_voice
+        }
+        
+    except Exception as fallback_error:
+        raise HTTPException(
+            status_code=500, 
+            detail=f"Ambos motores fallaron. HeyGen: {str(heygen_error)[:100]} | Edge-TTS: {str(fallback_error)[:100]}"
+        )
 
 @router.get("/projects", status_code=status.HTTP_200_OK)
 async def get_all_projects(db: Session = Depends(get_db)):

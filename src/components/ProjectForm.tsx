@@ -122,9 +122,9 @@ export default function ProjectForm({ onSuccess }: { onSuccess: (data: any) => v
           <h3 className="text-2xl font-bold text-white tracking-tight mb-2">Talent Selector</h3>
           <p className="text-neutral-400 text-sm mb-8">Paso 3: Elige a tu Avatar UGC hiperrealista generado por IA.</p>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-            <AvatarOption id="sofia" name="Sofía" desc="Acento Chileno - Casual" active={data.avatarId === 'sofia'} onSelect={() => setData({...data, avatarId: 'sofia'})} />
-            <AvatarOption id="mateo" name="Mateo" desc="Acento Neutro - Corporativo" active={data.avatarId === 'mateo'} onSelect={() => setData({...data, avatarId: 'mateo'})} />
-            <AvatarOption id="elena" name="Elena" desc="Acento Español - Energética" active={data.avatarId === 'elena'} onSelect={() => setData({...data, avatarId: 'elena'})} />
+            <AvatarOption id="sofia" name="Sofía" desc="🇨🇱 Acento Chileno - Casual" active={data.avatarId === 'sofia'} onSelect={() => setData({...data, avatarId: 'sofia'})} />
+            <AvatarOption id="mateo" name="Mateo" desc="🇲🇽 Acento Mexicano - Corporativo" active={data.avatarId === 'mateo'} onSelect={() => setData({...data, avatarId: 'mateo'})} />
+            <AvatarOption id="elena" name="Elena" desc="🇪🇸 Acento Español - Energética" active={data.avatarId === 'elena'} onSelect={() => setData({...data, avatarId: 'elena'})} />
           </div>
           <div className="flex gap-3 pt-4">
              <button type="button" onClick={prevStep} className="px-5 bg-[#09090b] border border-[#27272a] text-white font-medium py-4 rounded-xl hover:bg-[#18181b] transition-all"><ChevronLeft className="w-5 h-5" /></button>
