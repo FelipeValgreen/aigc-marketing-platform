@@ -1,5 +1,6 @@
 import os
 import asyncio
+from backend.services.stock_video_service import download_background_video
 
 def hex_to_ass_color(hex_color: str) -> str:
     """Convierte #RRGGBB a formato ASS de FFmpeg &HBBGGRR&"""
@@ -21,8 +22,10 @@ async def assemble_ugc_video(audio_path: str, vtt_path: str, output_filename: st
     audio_file = audio_path.lstrip('/')
     vtt_file = vtt_path.lstrip('/')
     
-    if not bg_video_path:
-        bg_video_path = os.path.join("static", "video", "background.mp4")
+    valid_exts = ('.mp4', '.mov', '.avi', '.jpg', '.jpeg', '.png')
+    if not bg_video_path or not bg_video_path.lower().endswith(valid_exts):
+        print("Ignorando archivo no compatible (ej. PDF). Retornando a Pexels AI...")
+        bg_video_path = await download_background_video(output_filename.split('_')[1] if output_filename else "abstract")
         
     bg_video = bg_video_path.lstrip('/')
     output_filepath = os.path.join("static", "video", output_filename)
