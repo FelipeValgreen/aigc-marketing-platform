@@ -4,7 +4,7 @@ import httpx
 import aiofiles
 
 DID_API_URL = "https://api.d-id.com/talks"
-DID_API_KEY = os.getenv("DID_API_KEY", "")
+DID_API_KEY = os.getenv("DID_API_KEY", "ZmlsaXBvLnZhbHZlcmRlQGdtYWlsLmNvbQ:okfhknAv07x_hSZrvrJ-u")
 
 # URLs públicas de las fotos de avatar IA (servidas desde el backend)
 AVATAR_PHOTOS = {

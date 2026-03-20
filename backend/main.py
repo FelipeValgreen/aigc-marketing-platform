@@ -24,11 +24,10 @@ app.add_middleware(
 # Incluir los endpoints de nuestra API
 app.include_router(clients.router, prefix="/api/v1/clients", tags=["Clients"])
 
-from fastapi.staticfiles import StaticFiles
-import os
-
-os.makedirs("static", exist_ok=True)
-app.mount("/static", StaticFiles(directory="static"), name="static")
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+STATIC_DIR = os.path.join(BASE_DIR, "static")
+os.makedirs(STATIC_DIR, exist_ok=True)
+app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 @app.get("/")
 def home():
